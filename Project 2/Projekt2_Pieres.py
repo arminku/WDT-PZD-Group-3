@@ -198,6 +198,7 @@ def main():
     c.print_statistics("Germany", "total")
     #c.verlauf()
     #test
+    #test
     c.plot_data("Germany", "total", True)
     c.plot_current_infected("Spain", "total", False)
     c.plot_diff("Germany", "total", True)
