@@ -72,9 +72,7 @@ class Corona:
         return int(max(ill.iloc[0,:]))       
 
     def zwischenlinie(self):
-        for index in range(100):
-            print("-", end="")
-        print("\n", end="")
+        print("".join(c for c in itertools.repeat("-", 100)))
 
     def print_statistics(self, country: str, state: str, treshold = 1000):
 
@@ -151,10 +149,9 @@ class Corona:
         rec = self.prep(self.rec, country, state)
         dt = self.prep(self.dt, country, state)
         col = list(inf.iloc[:,4:].columns.values)
-        
-        #Problem: wenn zwei Funktionen ausgeführt werden, wird kein zweiter Plot erstellt
-        
+        plt.title(str("Corona in " + country + " - " + state))
         plt.xticks(range(0,len(col),ticks), col[::ticks])
+        if log == True: plt.yscale("log")
         plt.plot(col, inf.loc[country][4:], "r")
         plt.plot(col, rec.loc[country][4:], "g")
         plt.plot(col, dt.loc[country][4:], "k")
@@ -166,14 +163,31 @@ class Corona:
         dt = self.prep(self.dt, country, state)
         ill = inf.iloc[:,4:] - rec.iloc[:,4:] - dt.iloc[:,4:]
         col = inf.iloc[:,4:].columns.values
-        y = ill.loc[country]
-        #plt.settitle("Corona in", country, "-", state)
+        plt.title(str("Corona in " + country + " - " + state))
+        if log == True: plt.yscale("log")
         plt.xticks(range(0,len(col),ticks), col[::ticks])
-        plt.plot(col, y, "k")
+        plt.plot(col, ill.loc[country], "k")
         plt.show()
       
     def plot_diff(self, country: str, state: str, log: bool, ticks=24):
-        pass
+        inf = self.prep(self.inf, country, state)
+        rec = self.prep(self.rec, country, state)
+        dt = self.prep(self.dt, country, state)
+        diffInf = []
+        diffRec = []
+        diffDt = []
+        col = inf.iloc[:,3:].columns.values
+        for index in range(0,len(col)):
+            diffInf.append(inf.iloc[0,index+3] - inf.iloc[0,index+2])
+            diffRec.append(rec.iloc[0,index+3] - rec.iloc[0,index+2])
+            diffDt.append(dt.iloc[0,index+3] - dt.iloc[0,index+2])
+        if log == True: plt.yscale("log")
+        plt.title(str("Corona in " + country + " - " + state))
+        plt.xticks(range(0,len(col), ticks), col[::ticks])
+        plt.plot(col, diffInf, "r")
+        plt.plot(col, diffRec, "g")
+        plt.plot(col, diffDt, "k")
+        plt.show()
     
     def plot_above_treshold(self, country: str, state: str, log: bool,treshold=1000, ticks=24):
         #vermutlich fill_between
@@ -181,10 +195,11 @@ class Corona:
 
 def main():
     c = Corona()
-    c.print_statistics("Australia", "total")
+    c.print_statistics("Germany", "total")
     #c.verlauf()
-    c.plot_data("Germany", "total", False)
+    c.plot_data("Germany", "total", True)
     c.plot_current_infected("Spain", "total", False)
+    c.plot_diff("Germany", "total", True)
 
 if __name__ == "__main__":
     main()
