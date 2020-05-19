@@ -1,6 +1,7 @@
 #Projekt 2 - Analyse Corona-Zahlen
 
 import pandas as pd
+import numpy as np
 import datetime
 import time
 import itertools
@@ -60,7 +61,6 @@ class Corona:
         return inf.iloc[0,-1] - rec.iloc[0,-1] - dt.iloc[0,-1]
 
     def meanIllWeek(self, inf: pd.DataFrame, rec: pd.DataFrame, dt: pd.DataFrame) -> int:
-        total = 0
         inf = inf.iloc[:,-7:]
         rec = rec.iloc[:,-7:]
         dt = dt.iloc[:,-7:]
@@ -117,32 +117,21 @@ class Corona:
         #17-5-20: Funktioniert noch nicht wie gewünscht: Plot wird nicht aktualisiert
         
         #Längen- und Breitengrad auf gerade Werte bringen
-        self.inf["Lat"] = self.inf["Lat"] - min(self.inf["Lat"])
-        self.inf["Long"] = self.inf["Long"] - min(self.inf["Long"])
+        inf = self.inf
+        #inf["Lat"] = inf["Lat"] - min(inf["Lat"])
+        #inf["Long"] = inf["Long"] - min(inf["Long"])
         #nach Ländern gruppiert und die Breiten- und Längengerade gemittelt
-        self.inf = self.inf.groupby(["Country/Region"]).mean()
-        fig = plt.figure()
-        ax = fig.add_subplot(1,1,1)
+        inf = inf.groupby(["Country/Region"]).mean()
         #1. Initialisierung:
-        maxWert = max(self.inf[[4]])
-        minWert = min(self.inf[[4]])
-        self.inf[[4]] = (self.inf[[4]] - minWert) / (maxWert - minWert)
-        x = self.inf[[2]]
-        y = self.inf[[3]]
-        ax.set_xlabel = "Breitengrad"
-        ax.set_ylabel = "Längengrad"
+        x = inf[self.col[3]]
+        y = inf[self.col[2]]
         for index in range(4,len(self.col)):
-            ax = fig.add_subplot(1,1,1)
-            maxWert = max(self.inf[[index]])
-            minWert = min(self.inf[[index]])
-            #die jeweilige Spalte wird normiert
-            self.inf[[index]] = (self.inf[[index]] - minWert)/(maxWert - minWert)
-            ax.scatter(x, y, c = "red", s = self.inf[[index]]*100)
+            maxWert = max(inf[self.col[index]])
+            minWert = min(inf[self.col[index]])
+            inf[self.col[index]] = (inf[self.col[index]] - minWert) / (maxWert - minWert)
+            plt.scatter(x,y,c = "red", s = inf[self.col[index]]*100)
+            time.sleep(0.1)     
             plt.show()
-            time.sleep(0.1)
-            ax.remove()
-
-    #Logarithmus: plt.xscale('log')    
 
     def plot_data(self,country: str, state: str, log: bool, ticks = 20):
         inf = self.prep(self.inf, country, state)
@@ -152,9 +141,10 @@ class Corona:
         plt.title(str("Corona in " + country + " - " + state))
         plt.xticks(range(0,len(col),ticks), col[::ticks])
         if log == True: plt.yscale("log")
-        plt.plot(col, inf.loc[country][4:], "r")
-        plt.plot(col, rec.loc[country][4:], "g")
-        plt.plot(col, dt.loc[country][4:], "k")
+        plt.plot(col, inf.loc[country][4:], "r", label ="Infected")
+        plt.plot(col, rec.loc[country][4:], "g", label = "Recovered")
+        plt.plot(col, dt.loc[country][4:], "k", label ="Deaths")
+        plt.legend(loc="best")
         plt.show()
      
     def plot_current_infected(self, country: str, state: str, log: bool, ticks = 24):
@@ -166,7 +156,8 @@ class Corona:
         plt.title(str("Corona in " + country + " - " + state))
         if log == True: plt.yscale("log")
         plt.xticks(range(0,len(col),ticks), col[::ticks])
-        plt.plot(col, ill.loc[country], "k")
+        plt.plot(col, ill.loc[country], "k", label ="Currently Infected")
+        plt.legend(loc="best")
         plt.show()
       
     def plot_diff(self, country: str, state: str, log: bool, ticks=24):
@@ -184,22 +175,46 @@ class Corona:
         if log == True: plt.yscale("log")
         plt.title(str("Corona in " + country + " - " + state))
         plt.xticks(range(0,len(col), ticks), col[::ticks])
-        plt.plot(col, diffInf, "r")
-        plt.plot(col, diffRec, "g")
-        plt.plot(col, diffDt, "k")
+        plt.plot(col, diffInf, "r", label="Infected")
+        plt.plot(col, diffRec, "g", label ="Recovered")
+        plt.plot(col, diffDt, "k", label ="Deaths")
+        plt.legend(loc="best")
         plt.show()
     
     def plot_above_treshold(self, country: str, state: str, log: bool,treshold=1000, ticks=24):
-        #vermutlich fill_between
-        pass
-
+        inf = self.prep(self.inf, country, state)
+        col = inf.iloc[:,5:].columns.values
+        diffInf = np.zeros(len(col))
+        for index in range(0,len(col)):
+            diffInf[index] = inf.iloc[0,index+5] - inf.iloc[0,index+4]
+        infAbove = diffInf > treshold
+        if log == True: plt.yscale("log")
+        plt.xticks(range(0,len(col),ticks), col[::ticks])
+        plt.plot(col, diffInf, "y", label="Infected")
+        #keine schöne Lösung
+        for index in range(0,len(infAbove)):
+            if infAbove[index] == True:
+                plt.axvspan(index, index+1, facecolor = "r", alpha=0.2)
+        plt.legend(loc="best")
+        plt.show()
+    
+    def print_reProdZahl(self, country: str, state: str):
+        inf = self.prep(self.inf, country, state)
+        diffInf = np.zeros((14))
+        for index in range(-17,-3):
+            diffInf[index+17] = inf.iloc[0,index+1] - inf.iloc[0,index]
+        diffInf.reshape(2,7).sum(axis=1)
+        print("Reproduktionszahl", country, "-", state, datetime.date.today(), ":", round(diffInf[0] / diffInf[1],2))
+        
 def main():
     c = Corona()
     c.print_statistics("Germany", "total")
-    #c.verlauf()
-    c.plot_data("Germany", "total", True)
-    c.plot_current_infected("Spain", "total", False)
-    c.plot_diff("Germany", "total", True)
+    c.verlauf()
+    #c.plot_data("Germany", "total", True)
+    #c.plot_current_infected("Spain", "total", False)
+    #c.plot_diff("Germany", "total", True)
+    c.print_reProdZahl("Germany", "total")
+    c.plot_above_treshold("Germany", "total", True)
 
 if __name__ == "__main__":
     main()
