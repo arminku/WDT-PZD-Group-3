@@ -3,9 +3,9 @@
 import pandas as pd
 import numpy as np
 import datetime
-import time
 import itertools
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 URL_CORONA_INFECTED = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/" + \
                       "csse_covid_19_data/csse_covid_19_time_series/" + \
@@ -112,27 +112,34 @@ class Corona:
               self.daysAboveWeek(inf, treshold))
         self.zwischenlinie()
 
-    def verlauf(self):
-        
-        #17-5-20: Funktioniert noch nicht wie gewünscht: Plot wird nicht aktualisiert
-        
-        #Längen- und Breitengrad auf gerade Werte bringen
+    def verlauf(self):       
         inf = self.inf
-        #inf["Lat"] = inf["Lat"] - min(inf["Lat"])
-        #inf["Long"] = inf["Long"] - min(inf["Long"])
         #nach Ländern gruppiert und die Breiten- und Längengerade gemittelt
-        inf = inf.groupby(["Country/Region"]).mean()
-        #1. Initialisierung:
+        index = itertools.count(start=4)
+        inf = inf.groupby(["Country/Region"]).mean() 
         x = inf[self.col[3]]
         y = inf[self.col[2]]
-        for index in range(4,len(self.col)):
-            maxWert = max(inf[self.col[index]])
-            minWert = min(inf[self.col[index]])
-            inf[self.col[index]] = (inf[self.col[index]] - minWert) / (maxWert - minWert)
-            plt.scatter(x,y,c = "red", s = inf[self.col[index]]*100)
-            time.sleep(0.1)     
-            plt.show()
-
+        
+        img = plt.imread("weltkarte.png")
+        
+        def animate(i):
+             if(next(index) < len(self.col)):
+                 maxWert = max(inf[self.col[next(index)]])
+                 minWert = min(inf[self.col[next(index)]])
+                 size = (inf[self.col[next(index)]] - minWert) / (maxWert - minWert)
+                 
+                 plt.cla()
+                 ax = plt.subplot()
+                 ax.imshow(img, extent=[-150,190,-60,80])
+                 plt.scatter(x,y,c="red", s= size*100)
+                 plt.tight_layout()
+        
+        ani = FuncAnimation(plt.gcf(), animate, interval=200)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        
     def plot_data(self,country: str, state: str, log: bool, ticks = 20):
         inf = self.prep(self.inf, country, state)
         rec = self.prep(self.rec, country, state)
@@ -195,6 +202,7 @@ class Corona:
         for index in range(0,len(infAbove)):
             if infAbove[index] == True:
                 plt.axvspan(index, index+1, facecolor = "r", alpha=0.2)
+                #hier vielleicht fill_betweenx verwenden
         plt.legend(loc="best")
         plt.show()
     
@@ -205,7 +213,7 @@ class Corona:
             diffInf[index+17] = inf.iloc[0,index+1] - inf.iloc[0,index]
         diffInf.reshape(2,7).sum(axis=1)
         print("Reproduktionszahl", country, "-", state, datetime.date.today(), ":", round(diffInf[0] / diffInf[1],2))
-        
+    
 def main():
     c = Corona()
     c.print_statistics("Germany", "total")
@@ -214,7 +222,7 @@ def main():
     #c.plot_current_infected("Spain", "total", False)
     #c.plot_diff("Germany", "total", True)
     c.print_reProdZahl("Germany", "total")
-    c.plot_above_treshold("Germany", "total", True)
+    #c.plot_above_treshold("Germany", "total", True)
 
 if __name__ == "__main__":
     main()
