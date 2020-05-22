@@ -2,6 +2,7 @@ from itertools import count
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+#from matplotlib import animation
 
 URL_CORONA_INFECTED = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/" + \
                       "csse_covid_19_data/csse_covid_19_time_series/" + \
@@ -31,6 +32,8 @@ def animate(i):
          plt.legend(loc = "best")
         
 ani = FuncAnimation(plt.gcf(), animate, interval=200)
+#writer = animation.FFMpegWriter(fps=200, metadata = dict(artist='Me'), bitrate=1800)
 
 plt.tight_layout()
 plt.show()
+#ani.save("Coronaverlauf.mp4", writer = writer)
