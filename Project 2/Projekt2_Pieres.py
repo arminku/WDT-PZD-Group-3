@@ -35,11 +35,11 @@ class Corona:
     def today(self, df: pd.DataFrame) -> int:
         return df.iloc[0,-1] - df.iloc[0,-2]
 
-    def meanTotal(self, df: pd.DataFrame) -> float:
-        return df.iloc[0,-1] / (len(list(df.columns.values)) - 4)
+    def meanTotal(self, df: pd.DataFrame) -> int:
+        return int(df.iloc[0,-1] / (len(list(df.columns.values)) - 4))
 
-    def meanWeek(self, df: pd.DataFrame) -> float:
-        return (df.iloc[0,-1] - df.iloc[0,-7])/ 7
+    def meanWeek(self, df: pd.DataFrame) -> int:
+        return int((df.iloc[0,-1] - df.iloc[0,-7])/ 7)
 
     def daysAbove(self, inf: pd.DataFrame, treshold: int) -> int:
         c = 0
@@ -72,7 +72,8 @@ class Corona:
         return int(max(ill.iloc[0,:]))       
 
     def zwischenlinie(self):
-        print("".join(c for c in itertools.repeat("-", 100)))
+        print("|\n", end="")
+        print("".join(c for c in itertools.repeat("-", 94)))
 
     def print_statistics(self, country: str, state: str, treshold = 1000):
 
@@ -82,63 +83,47 @@ class Corona:
         rec = self.prep(self.rec, country, state)
         dt = self.prep(self.dt, country, state)
         
-        print("Abruf am:", datetime.date.today())
-        title = "Information for " + country + " - " + state
+        title = "Information for " + country + " - " + state + " (" + str(datetime.date.today()) + ")"
         print("".join(c for c in itertools.repeat("#", len(title) +6)))
         print("# ", title, " #")
         print("".join(c for c in itertools.repeat("#", len(title) +6)))
         
         frames = {"Infected": inf, "Recovered": rec, "Deaths": dt}
+        breite = 30
+        
         #Total
         for data in frames:
-            print("| Total",data,":\t\t", self.total(frames[data]), end=" ")
+            anzZus = breite - len(data) - 4*len(" ") - len("Total:") - len(str(self.total(frames[data])))
+            zusatz = "".join(c for c in itertools.repeat(" ", anzZus))
+            loes = "| Total " + data + ": " + zusatz + str(self.total(frames[data])) 
+            print(loes, end=" ")
         self.zwischenlinie()
         #today, mean, week
         for data in frames:
-            print("|", data, "Today:\t\t", self.today(frames[data]), "\t", end="")
-        print("\n", end="")
+            anzZus = breite - len(data) - 4*len(" ") - len("Today:") - len(str(self.today(frames[data])))
+            zusatz = "".join(c for c in itertools.repeat(" ", anzZus))
+            loes = "| " +  data + " Today: " + zusatz + str(self.today(frames[data]))
+            print(loes, end=" ")
+        print("|\n", end="")
         for data in frames:
-            print("|", data, "Mean Total:\t", int(self.meanTotal(frames[data])), "\t", end="")
-        print("\n", end="")
+            anzZus = breite - len(data) - 3*len(" ") - len("Mean Total:") - len(str(self.meanTotal(frames[data])))
+            zusatz = "".join(c for c in itertools.repeat(" ", anzZus))
+            loes = "| " + data + " Mean Total:" + zusatz + str(self.meanTotal(frames[data]))
+            print(loes, end=" ")
+        print("|\n", end="")
         for data in frames:
-            print("|", data, "Mean Week:\t", int(self.meanWeek(frames[data])), "\t", end="")
+            anzZus = breite - len(data) - 3*len(" ") - len("Mean Week:") - len(str(self.meanWeek(frames[data])))
+            zusatz = "".join(c for c in itertools.repeat(" ", anzZus))
+            loes = "| " + data + " Mean Week:" + zusatz + str(self.meanWeek(frames[data]))
+            print(loes, end=" ")
         self.zwischenlinie()
         
         #currently Ill
-        print("| Currently Ill:\t\t", self.currentlyIll(inf, rec, dt), "\t| Mean Ill Week:\t\t", 
-              self.meanIllWeek(inf, rec, dt), "\t| Maximum Ill:\t", self.maxIll(inf,rec,dt))
-        print("| Treshold:\t\t\t\t", treshold, "\t| Days Above:\t\t\t", 
-              self.daysAbove(inf, treshold), "\t| Days Above Week:", 
-              self.daysAboveWeek(inf, treshold))
-        self.zwischenlinie()
-
-    def verlauf(self):       
-        inf = self.inf
-        #nach Ländern gruppiert und die Breiten- und Längengerade gemittelt
-        index = itertools.count(start=4)
-        inf = inf.groupby(["Country/Region"]).mean() 
-        x = inf[self.col[3]]
-        y = inf[self.col[2]]
-        
-        img = plt.imread("weltkarte.png")
-        
-        def animate(i):
-             if(next(index) < len(self.col)):
-                 maxWert = max(inf[self.col[next(index)]])
-                 minWert = min(inf[self.col[next(index)]])
-                 size = (inf[self.col[next(index)]] - minWert) / (maxWert - minWert)
-                 
-                 plt.cla()
-                 ax = plt.subplot()
-                 ax.imshow(img, extent=[-150,190,-60,80])
-                 plt.scatter(x,y,c="red", s= size*100)
-                 plt.tight_layout()
-        
-        ani = FuncAnimation(plt.gcf(), animate, interval=200)
-        
-        plt.tight_layout()
-        plt.show()
-        
+        print("| Currently Ill: %13d | Mean Ill Week: %13d | Maximum Ill: %15d |" 
+              % (self.currentlyIll(inf, rec, dt), self.meanIllWeek(inf, rec, dt), self.maxIll(inf,rec,dt)))
+        print("| Treshold: %18d | Days Above: %16d | Days Above Week: %11d" % (treshold,  
+              self.daysAbove(inf, treshold), self.daysAboveWeek(inf, treshold)), end=" ")
+        self.zwischenlinie()        
         
     def plot_data(self,country: str, state: str, log: bool, ticks = 20):
         inf = self.prep(self.inf, country, state)
@@ -213,16 +198,21 @@ class Corona:
             diffInf[index+17] = inf.iloc[0,index+1] - inf.iloc[0,index]
         diffInf.reshape(2,7).sum(axis=1)
         print("Reproduktionszahl", country, "-", state, datetime.date.today(), ":", round(diffInf[0] / diffInf[1],2))
-    
+
+    def globalTotal(self):
+        print("Total Infected:\t\t%10d" % self.inf[self.col[-1]].sum())
+        print("Total Recovered:\t%10d" % self.rec[self.col[-1]].sum())
+        print("Total Deaths:\t\t%10d" % self.dt[self.col[-1]].sum())
+        
 def main():
     c = Corona()
-    c.print_statistics("Germany", "total")
-    c.verlauf()
+    c.print_statistics("Russia", "total")
     #c.plot_data("Germany", "total", True)
     #c.plot_current_infected("Spain", "total", False)
     #c.plot_diff("Germany", "total", True)
     c.print_reProdZahl("Germany", "total")
     #c.plot_above_treshold("Germany", "total", True)
+    c.globalTotal()
 
 if __name__ == "__main__":
     main()
